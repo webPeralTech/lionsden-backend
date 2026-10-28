@@ -55,3 +55,12 @@ export const updateBungalow = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deleteBungalow = async (req, res, next) => {
+  try {
+    const result = await bungalowService.deleteBungalow(req.params.id, req);
+    return sendSuccess(res, { data: result, message: 'Bungalow deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

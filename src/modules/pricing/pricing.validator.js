@@ -1,10 +1,18 @@
 import { z } from 'zod';
 import { objectIdSchema } from '../../common/validators/id.validator.js';
 import { PRICING_ADJUSTMENT_TYPES, BUNGALOW_CATEGORIES } from '../../config/constants.js';
+import { paginationQuerySchema } from '../../common/validators/pagination.validator.js';
+
+export const getPricingRulesQuerySchema = paginationQuerySchema
+  .extend({
+    branchId: objectIdSchema.optional(),
+    isActive: z.enum(['true', 'false']).optional(),
+  })
+  .passthrough();
 
 const pricingRuleBaseSchema = z.object({
   name: z.string().trim().min(2, 'Name is required'),
-  festivalName: z.string().trim().optional(),
+  festivalName: z.string().trim().optional().nullable().default(''),
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
   applicableBranches: z.array(objectIdSchema).default([]),
@@ -14,7 +22,7 @@ const pricingRuleBaseSchema = z.object({
   adjustmentValue: z.number().min(0, 'Adjustment value cannot be negative'),
   priority: z.number().int().default(1),
   isActive: z.boolean().default(true),
-  description: z.string().trim().optional(),
+  description: z.string().trim().optional().nullable().default(''),
 });
 
 export const createPricingRuleSchema = pricingRuleBaseSchema.refine(
@@ -37,3 +45,4 @@ export const updatePricingRuleSchema = pricingRuleBaseSchema.partial().refine(
     path: ['endDate'],
   }
 );
+

@@ -50,3 +50,13 @@ export const updatePricingRule = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deletePricingRule = async (req, res, next) => {
+  try {
+    const result = await pricingService.deletePricingRule(req.params.id, req);
+    return sendSuccess(res, { data: result, message: 'Pricing rule deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+

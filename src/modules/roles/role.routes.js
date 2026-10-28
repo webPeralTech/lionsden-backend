@@ -11,7 +11,17 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', requirePermissions([PERMISSIONS.ROLES_MANAGE]), roleController.getAllRoles);
+router.get(
+  '/permissions',
+  requirePermissions([PERMISSIONS.ROLES_MANAGE, PERMISSIONS.USERS_READ, PERMISSIONS.USERS_CREATE, PERMISSIONS.USERS_UPDATE], { matchAll: false }),
+  roleController.getAvailablePermissions
+);
+
+router.get(
+  '/',
+  requirePermissions([PERMISSIONS.ROLES_MANAGE, PERMISSIONS.USERS_READ, PERMISSIONS.USERS_CREATE, PERMISSIONS.USERS_UPDATE], { matchAll: false }),
+  roleController.getAllRoles
+);
 
 router.get(
   '/:id',

@@ -5,6 +5,10 @@ import { logger } from './logger.js';
 let isReplicaSet = false;
 
 export const connectDatabase = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
   try {
     const conn = await mongoose.connect(config.db.uri, {
       autoIndex: true,

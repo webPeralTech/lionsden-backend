@@ -31,7 +31,7 @@ router.get(
 
 router.post(
   '/',
-  requireRoles(ROLES.SUPER_ADMIN),
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   requirePermissions([PERMISSIONS.BUNGALOWS_CREATE]),
   validate({ body: createBungalowSchema }),
   bungalowController.createBungalow
@@ -39,10 +39,18 @@ router.post(
 
 router.put(
   '/:id',
-  requireRoles(ROLES.SUPER_ADMIN),
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   requirePermissions([PERMISSIONS.BUNGALOWS_UPDATE]),
   validate({ params: idParamSchema, body: updateBungalowSchema }),
   bungalowController.updateBungalow
+);
+
+router.delete(
+  '/:id',
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  requirePermissions([PERMISSIONS.BUNGALOWS_DELETE]),
+  validate({ params: idParamSchema }),
+  bungalowController.deleteBungalow
 );
 
 export default router;

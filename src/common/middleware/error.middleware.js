@@ -9,8 +9,16 @@ export const errorHandler = (err, req, res, _next) => {
   let errorCode = err.errorCode || ERROR_CODES.INTERNAL_SERVER_ERROR;
   let details = err.details || null;
 
-  // Handle Mongoose / MongoDB specific errors
-  if (err.name === 'CastError') {
+  // Handle custom AppError (including Zod validation errors)
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
+    message = err.message;
+    errorCode = err.errorCode;
+    details = err.details;
+    if (Array.isArray(details) && details.length > 0 && details[0].message) {
+      message = details.map(d => d.message).join('. ');
+    }
+  } else if (err.name === 'CastError') {
     statusCode = 400;
     message = `Invalid format for field '${err.path}'`;
     errorCode = ERROR_CODES.BAD_REQUEST;
@@ -21,13 +29,14 @@ export const errorHandler = (err, req, res, _next) => {
     errorCode = ERROR_CODES.CONFLICT;
     details = err.keyValue;
   } else if (err.name === 'ValidationError') {
+    // Mongoose schema validation error
     statusCode = 422;
-    message = 'Database validation failed';
     errorCode = ERROR_CODES.VALIDATION_ERROR;
     details = Object.values(err.errors || {}).map(e => ({
       field: e.path,
       message: e.message,
     }));
+    message = details.length > 0 ? details.map(d => d.message).join('. ') : 'Database validation failed';
   } else if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Invalid authentication token';

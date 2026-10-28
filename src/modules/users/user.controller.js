@@ -61,3 +61,12 @@ export const resetUserPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const result = await userService.deleteUser(req.params.id, req);
+    return sendSuccess(res, { data: result, message: 'User deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

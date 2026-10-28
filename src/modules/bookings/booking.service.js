@@ -2,9 +2,10 @@ import mongoose from 'mongoose';
 import crypto from 'node:crypto';
 import { Booking } from './booking.model.js';
 import { ReservationLock } from './reservation-lock.model.js';
+import { Counter } from './counter.model.js';
 import { Bungalow } from '../bungalows/bungalow.model.js';
 import { Branch } from '../branches/branch.model.js';
-import { findOrCreateCustomer } from '../customers/customer.service.js';
+import { findOrCreateCustomer, incrementCustomerBookings } from '../customers/customer.service.js';
 import { calculateApplicablePrice } from '../pricing/pricing.service.js';
 import { recordPayment } from '../payments/payment.service.js';
 import { calculateNights } from '../../common/utils/date.util.js';
@@ -38,12 +39,49 @@ const getDateKeysForInterval = (checkIn, checkOut) => {
 };
 
 /**
- * Generates a clean readable booking ID e.g., "BK-AHM-20261025-A1B2"
+ * Generates an auto-incrementing sequential booking ID in format "LD-YYYY-1", "LD-YYYY-2", "LD-YYYY-3", ...
  */
-const generateBookingId = branchCode => {
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const randomHex = crypto.randomBytes(2).toString('hex').toUpperCase();
-  return `BK-${branchCode}-${dateStr}-${randomHex}`;
+const generateBookingId = async (session = null) => {
+  const year = new Date().getFullYear();
+  const counterId = `bookingId_${year}`;
+
+  let counter = await Counter.findById(counterId).session(session || null);
+  if (!counter) {
+    const regex = new RegExp(`^LD-${year}-(\\d+)$`, 'i');
+    const existingBookings = await Booking.find(
+      { bookingId: { $regex: regex } },
+      'bookingId'
+    ).session(session || null);
+
+    let maxNum = 0;
+    for (const b of existingBookings) {
+      const match = b.bookingId.match(regex);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    }
+
+    const options = { new: true, upsert: true, setDefaultsOnInsert: true };
+    if (session) options.session = session;
+
+    counter = await Counter.findByIdAndUpdate(
+      counterId,
+      { $set: { seq: maxNum } },
+      options
+    );
+  }
+
+  const options = { new: true };
+  if (session) options.session = session;
+
+  const updated = await Counter.findByIdAndUpdate(
+    counterId,
+    { $inc: { seq: 1 } },
+    options
+  );
+
+  return `LD-${year}-${updated.seq}`;
 };
 
 /**
@@ -79,15 +117,15 @@ export const createBooking = async (data, req) => {
     throw new NotFoundError(`Branch with id ${data.branch} not found`);
   }
 
-  if (bungalow.branch.toString() !== branch._id.toString()) {
-    throw new BadRequestError('The selected bungalow does not belong to the selected branch');
-  }
+  // if (bungalow.branch.toString() !== branch._id.toString()) {
+  //   throw new BadRequestError('The selected bungalow does not belong to the selected branch');
+  // }
 
   const checkIn = new Date(data.checkIn);
   const checkOut = new Date(data.checkOut);
   const nights = calculateNights(checkIn, checkOut);
   const dateKeys = getDateKeysForInterval(checkIn, checkOut);
-  const bookingId = generateBookingId(branch.code);
+  const bookingId = await generateBookingId();
 
   // Price calculations
   const pricingResult = await calculateApplicablePrice(bungalow, checkIn, checkOut);
@@ -152,11 +190,11 @@ export const createBooking = async (data, req) => {
         email: data.customer.email || '',
         branch: branch._id,
       },
-      req
+      req,
+      session
     );
 
-    customer.totalBookings += 1;
-    await customer.save({ session: session || null });
+    await incrementCustomerBookings(customer._id, session);
 
     // 4. Create booking document
     const [booking] = await Booking.create(

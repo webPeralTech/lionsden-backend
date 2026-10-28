@@ -7,9 +7,12 @@ import {
   enforceBranchScope,
 } from '../../common/middleware/rbac.middleware.js';
 import { validate } from '../../common/middleware/validate.middleware.js';
-import { createPricingRuleSchema, updatePricingRuleSchema } from './pricing.validator.js';
+import {
+  createPricingRuleSchema,
+  updatePricingRuleSchema,
+  getPricingRulesQuerySchema,
+} from './pricing.validator.js';
 import { idParamSchema } from '../../common/validators/id.validator.js';
-import { paginationQuerySchema } from '../../common/validators/pagination.validator.js';
 import { ROLES, PERMISSIONS } from '../../config/constants.js';
 
 const router = Router();
@@ -20,7 +23,7 @@ router.get(
   '/',
   requirePermissions([PERMISSIONS.PRICING_READ]),
   enforceBranchScope({ source: 'query', field: 'branchId' }),
-  validate({ query: paginationQuerySchema }),
+  validate({ query: getPricingRulesQuerySchema }),
   pricingController.getAllPricingRules
 );
 
@@ -33,7 +36,7 @@ router.get(
 
 router.post(
   '/',
-  requireRoles(ROLES.SUPER_ADMIN),
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   requirePermissions([PERMISSIONS.PRICING_CREATE]),
   validate({ body: createPricingRuleSchema }),
   pricingController.createPricingRule
@@ -41,10 +44,19 @@ router.post(
 
 router.put(
   '/:id',
-  requireRoles(ROLES.SUPER_ADMIN),
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   requirePermissions([PERMISSIONS.PRICING_UPDATE]),
   validate({ params: idParamSchema, body: updatePricingRuleSchema }),
   pricingController.updatePricingRule
 );
 
+router.delete(
+  '/:id',
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  requirePermissions([PERMISSIONS.PRICING_DELETE]),
+  validate({ params: idParamSchema }),
+  pricingController.deletePricingRule
+);
+
 export default router;
+

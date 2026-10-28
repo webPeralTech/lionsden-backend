@@ -16,6 +16,12 @@ const branchSchema = new mongoose.Schema(
       unique: true,
       maxlength: 10,
     },
+    type: {
+      type: String,
+      enum: ['RESORT', 'HEAD_OFFICE'],
+      default: 'RESORT',
+      index: true,
+    },
     address: {
       type: String,
       trim: true,

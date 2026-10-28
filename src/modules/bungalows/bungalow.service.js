@@ -44,7 +44,15 @@ export const getAllBungalows = async ({
 }) => {
   const filter = {};
 
-  if (branchId) filter.branch = branchId;
+  if (branchId) {
+    const branch = await Branch.findById(branchId);
+    if (branch && branch.type === 'HEAD_OFFICE') {
+      const dhari = await Branch.findOne({ code: 'DHARI' });
+      if (dhari) filter.branch = dhari._id;
+    } else {
+      filter.branch = branchId;
+    }
+  }
   if (category) filter.category = category;
   if (isActive !== undefined) filter.isActive = isActive;
   if (maintenanceStatus) filter.maintenanceStatus = maintenanceStatus;
@@ -121,4 +129,24 @@ export const updateBungalow = async (id, data, req) => {
   });
 
   return bungalow;
+};
+
+export const deleteBungalow = async (id, req) => {
+  const bungalow = await Bungalow.findById(id);
+  if (!bungalow) {
+    throw new NotFoundError(`Bungalow with id ${id} not found`);
+  }
+
+  await Bungalow.findByIdAndDelete(id);
+
+  await logAudit({
+    req,
+    action: 'BUNGALOW_DELETED',
+    entity: 'BUNGALOW',
+    entityId: id,
+    branch: bungalow.branch,
+    changes: { number: bungalow.number, category: bungalow.category },
+  });
+
+  return { message: `Bungalow ${bungalow.number} deleted successfully` };
 };

@@ -55,4 +55,12 @@ router.post(
   userController.resetUserPassword
 );
 
+router.delete(
+  '/:id',
+  requireRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  requirePermissions([PERMISSIONS.USERS_DELETE]),
+  validate({ params: idParamSchema }),
+  userController.deleteUser
+);
+
 export default router;

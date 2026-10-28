@@ -42,9 +42,17 @@ export const requirePermissions = (permissions = [], { matchAll = true } = {}) =
 
     const userPermissions = new Set(req.user.role.permissions || []);
 
+    const hasSinglePermission = (p) => {
+      if (userPermissions.has(p)) return true;
+      if (userPermissions.has('*') || userPermissions.has('*:*')) return true;
+      const [module] = p.split(':');
+      if (module && userPermissions.has(`${module}:manage`)) return true;
+      return false;
+    };
+
     const hasPermission = matchAll
-      ? permissions.every(p => userPermissions.has(p))
-      : permissions.some(p => userPermissions.has(p));
+      ? permissions.every(p => hasSinglePermission(p))
+      : permissions.some(p => hasSinglePermission(p));
 
     if (!hasPermission) {
       return next(

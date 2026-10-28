@@ -125,18 +125,35 @@ export const createPricingRule = async (data, req) => {
 };
 
 export const getAllPricingRules = async ({ branchId, isActive, search, page = 1, limit = 20 }) => {
-  const filter = {};
+  const conditions = [];
 
-  if (isActive !== undefined) filter.isActive = isActive;
+  if (isActive !== undefined) {
+    conditions.push({ isActive });
+  }
+
   if (branchId) {
-    filter.$or = [{ applicableBranches: branchId }, { applicableBranches: { $size: 0 } }];
+    conditions.push({
+      $or: [{ applicableBranches: branchId }, { applicableBranches: { $size: 0 } }],
+    });
   }
-  if (search) {
-    filter.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { festivalName: { $regex: search, $options: 'i' } },
-    ];
+
+  if (search && search.trim()) {
+    const trimmed = search.trim();
+    conditions.push({
+      $or: [
+        { name: { $regex: trimmed, $options: 'i' } },
+        { festivalName: { $regex: trimmed, $options: 'i' } },
+        { description: { $regex: trimmed, $options: 'i' } },
+      ],
+    });
   }
+
+  const filter =
+    conditions.length === 0
+      ? {}
+      : conditions.length === 1
+      ? conditions[0]
+      : { $and: conditions };
 
   const skip = (page - 1) * limit;
 
@@ -193,3 +210,23 @@ export const updatePricingRule = async (id, data, req) => {
 
   return rule;
 };
+
+export const deletePricingRule = async (id, req) => {
+  const rule = await PricingRule.findById(id);
+  if (!rule) {
+    throw new NotFoundError(`Pricing rule with id ${id} not found`);
+  }
+
+  await PricingRule.findByIdAndDelete(id);
+
+  await logAudit({
+    req,
+    action: 'PRICING_RULE_DELETED',
+    entity: 'PRICING',
+    entityId: id,
+    changes: { name: rule.name, festivalName: rule.festivalName },
+  });
+
+  return { message: `Pricing rule ${rule.name} deleted successfully` };
+};
+

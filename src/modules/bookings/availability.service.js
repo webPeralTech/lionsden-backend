@@ -1,5 +1,6 @@
 import { Bungalow } from '../bungalows/bungalow.model.js';
 import { Booking } from './booking.model.js';
+import { Branch } from '../branches/branch.model.js';
 import { MaintenanceTicket } from '../maintenance/maintenance.model.js';
 import { calculateApplicablePrice } from '../pricing/pricing.service.js';
 import {
@@ -25,9 +26,19 @@ export const searchAvailability = async ({
   const reqCheckIn = new Date(checkIn);
   const reqCheckOut = new Date(checkOut);
 
+  // If branch is provided, resolve Head Office (AHM) to Dhari Resort since all bungalows are at Dhari
+  let targetBranchId = branch;
+  if (branch) {
+    const branchDoc = await Branch.findById(branch);
+    if (branchDoc && branchDoc.type === 'HEAD_OFFICE') {
+      const dhari = await Branch.findOne({ code: 'DHARI' });
+      if (dhari) targetBranchId = dhari._id;
+    }
+  }
+
   // 1. Build initial bungalow query
   const bungalowFilter = {
-    branch,
+    ...(targetBranchId ? { branch: targetBranchId } : {}),
     isActive: true,
   };
 

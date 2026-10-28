@@ -2,21 +2,33 @@ import { Customer } from './customer.model.js';
 import { NotFoundError } from '../../common/errors/app.error.js';
 import { logAudit } from '../audit-logs/audit-log.service.js';
 
-export const findOrCreateCustomer = async (data, req) => {
-  let customer = await Customer.findOne({ phone: data.phone });
+export const findOrCreateCustomer = async (data, req, session = null) => {
+  const query = Customer.findOne({ phone: data.phone });
+  if (session) query.session(session);
+  let customer = await query;
 
   if (customer) {
+    let modified = false;
     if (data.name && customer.name !== data.name) {
       customer.name = data.name;
+      modified = true;
     }
     if (data.email && !customer.email) {
       customer.email = data.email;
+      modified = true;
     }
-    await customer.save();
+    if (modified) {
+      await customer.save({ session: session || null });
+    }
     return customer;
   }
 
-  customer = await Customer.create(data);
+  if (session) {
+    const [created] = await Customer.create([data], { session });
+    customer = created;
+  } else {
+    customer = await Customer.create(data);
+  }
 
   await logAudit({
     req,
@@ -30,8 +42,17 @@ export const findOrCreateCustomer = async (data, req) => {
   return customer;
 };
 
-export const createCustomer = async (data, req) => {
-  return findOrCreateCustomer(data, req);
+export const incrementCustomerBookings = async (customerId, session = null) => {
+  if (!customerId) return;
+  await Customer.updateOne(
+    { _id: customerId },
+    { $inc: { totalBookings: 1 } },
+    { session: session || null }
+  );
+};
+
+export const createCustomer = async (data, req, session = null) => {
+  return findOrCreateCustomer(data, req, session);
 };
 
 export const getAllCustomers = async ({ branchId, search, page = 1, limit = 20 }) => {

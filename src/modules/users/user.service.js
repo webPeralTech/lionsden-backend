@@ -181,3 +181,33 @@ export const resetUserPassword = async (id, newPassword, req) => {
 
   return { message: 'Password has been reset successfully' };
 };
+
+export const deleteUser = async (id, req) => {
+  const user = await User.findById(id).populate('role');
+  if (!user) {
+    throw new NotFoundError(`User with id ${id} not found`);
+  }
+
+  // Prevent deleting Super Admin
+  if (user.role?.code === ROLES.SUPER_ADMIN) {
+    throw new ForbiddenError('Super Admin user cannot be deleted');
+  }
+
+  // Prevent user deleting their own account
+  if (req?.user?._id?.toString() === id.toString()) {
+    throw new BadRequestError('You cannot delete your own account');
+  }
+
+  await User.findByIdAndDelete(id);
+
+  await logAudit({
+    req,
+    action: 'USER_DELETED',
+    entity: 'USER',
+    entityId: id,
+    branch: user.branch,
+    changes: { email: user.email, name: user.name },
+  });
+
+  return { message: 'User deleted successfully' };
+};

@@ -1,6 +1,15 @@
 import * as roleService from './role.service.js';
 import { sendSuccess, sendCreated } from '../../common/utils/response.util.js';
 
+export const getAvailablePermissions = async (req, res, next) => {
+  try {
+    const data = await roleService.getAvailablePermissions();
+    return sendSuccess(res, { data, message: 'Permissions retrieved successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAllRoles = async (req, res, next) => {
   try {
     const roles = await roleService.getAllRoles();

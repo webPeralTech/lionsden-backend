@@ -3,8 +3,8 @@ import { config } from '../../config/index.js';
 import { ERROR_CODES } from '../errors/error-codes.js';
 
 export const standardLimiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.max,
+  windowMs: config.isDevelopment ? 60000 : config.rateLimit.windowMs,
+  max: config.isDevelopment ? 5000 : config.rateLimit.max,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -19,8 +19,8 @@ export const standardLimiter = rateLimit({
 });
 
 export const loginLimiter = rateLimit({
-  windowMs: config.rateLimit.loginWindowMs,
-  max: config.rateLimit.loginMax,
+  windowMs: config.isDevelopment ? 60000 : config.rateLimit.loginWindowMs,
+  max: config.isDevelopment ? 100 : config.rateLimit.loginMax,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
