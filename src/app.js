@@ -76,6 +76,19 @@ app.use(standardLimiter);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use(`${config.apiPrefix}/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
+// Root Welcome & Health Endpoints
+app.get('/', (req, res) => {
+  res.status(200).json({
+    service: 'LionsDen Resort Management API',
+    status: 'ACTIVE',
+    version: '1.0.0',
+    docs: '/api-docs',
+    health: '/health',
+    ready: '/ready',
+    apiPrefix: config.apiPrefix,
+  });
+});
+
 // Health & Readiness Endpoints
 app.get('/health', (req, res) => {
   res.status(200).json({
