@@ -1,16 +1,18 @@
 import pino from 'pino';
 import { config } from './index.js';
 
-const transport = config.isDevelopment
-  ? {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
-        ignore: 'pid,hostname',
-      },
-    }
-  : undefined;
+const isVercel = Boolean(process.env.VERCEL);
+const transport =
+  config.isDevelopment && !isVercel
+    ? {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
+          ignore: 'pid,hostname',
+        },
+      }
+    : undefined;
 
 export const logger = pino({
   level: config.logLevel || 'info',
